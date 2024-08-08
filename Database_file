@@ -1,0 +1,9 @@
+CREATE DATABASE car_parking_db;
+
+USE car_parking_db;
+
+CREATE TABLE parked_cars (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    car_number VARCHAR(20),
+    arrival_time VARCHAR(30)
+);
