@@ -1,0 +1,104 @@
+#include <iostream>
+#include <ctime>
+#include <mysql/mysql.h> 
+
+
+using namespace std;
+
+int main() {
+    
+    string username, password;
+
+   
+    cout << "Enter username: ";
+    cin >> username;
+    cout << "Enter password: ";
+    cin >> password;
+
+    if (username == "admin" && password == "password") {
+        cout << "Login successful!" << endl;
+
+        MYSQL* conn;
+        conn = mysql_init(0);
+        conn = mysql_real_connect(conn, "localhost", "root", "root_password", "car_parking_db", 3306, NULL, 0);
+
+        if (conn) {
+            int choice;
+            do {
+                // Menu options
+                cout << "\n1. Record Car Arrival\n2. Record Car Departure and Calculate Charges\n3. View Parked Cars\n4. Exit\n";
+                cout << "Enter your choice: ";
+                cin >> choice;
+
+                if (choice == 1) {
+                    string carNumber;
+                    cout << "Enter car number: ";
+                    cin >> carNumber;
+
+                   
+                    time_t now = time(0);
+                    char* dt = ctime(&now);
+
+                    
+                    string query = "INSERT INTO parked_cars (car_number, arrival_time) VALUES ('" + carNumber + "', '" + string(dt) + "')";
+                    mysql_query(conn, query.c_str());
+
+                    cout << "Car arrival recorded successfully!" << endl;
+
+                } else if (choice == 2) {
+                    string carNumber;
+                    cout << "Enter car number: ";
+                    cin >> carNumber;
+
+                   
+                    string query = "SELECT arrival_time FROM parked_cars WHERE car_number = '" + carNumber + "'";
+                    mysql_query(conn, query.c_str());
+                    MYSQL_RES* res = mysql_store_result(conn);
+                    MYSQL_ROW row;
+
+                    if ((row = mysql_fetch_row(res))) {
+                        struct tm tm;
+                        strptime(row[0], "%a %b %d %H:%M:%S %Y", &tm);
+                        time_t arrivalTime = mktime(&tm);
+                        time_t now = time(0);
+
+                        
+                        double hoursParked = difftime(now, arrivalTime) / 3600.0;
+                        int charges = static_cast<int>(hoursParked * 100); // Rs 100 per hour
+
+                        cout << "Total parking charges for car number " << carNumber << ": Rs " << charges << endl;
+
+                       
+                        query = "DELETE FROM parked_cars WHERE car_number = '" + carNumber + "'";
+                        mysql_query(conn, query.c_str());
+                    } else {
+                        cout << "Car not found!" << endl;
+                    }
+                    mysql_free_result(res);
+
+                } else if (choice == 3) {
+                    
+                    MYSQL_RES* res;
+                    MYSQL_ROW row;
+                    string query = "SELECT * FROM parked_cars";
+                    mysql_query(conn, query.c_str());
+                    res = mysql_store_result(conn);
+
+                    cout << "Car Number\tArrival Time" << endl;
+                    while ((row = mysql_fetch_row(res))) {
+                        cout << row[1] << "\t\t" << row[2] << endl;
+                    }
+                    mysql_free_result(res);
+                }
+            } while (choice != 4);
+
+            mysql_close(conn);
+        } else {
+            cout << "Database connection failed!" << endl;
+        }
+    } else {
+        cout << "Login failed!" << endl;
+    }
+
+    return 0;
+}
